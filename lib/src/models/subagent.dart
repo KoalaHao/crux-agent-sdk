@@ -1,0 +1,212 @@
+/// A preconfigured model role. Roles are user-defined routing labels, not a
+/// Crux judgement about a model's quality or vendor.
+///
+/// v2 naming: `expert` (read-only advisors you consult) and `worker`
+/// (agents you dispatch to do work). The persisted config key and database
+/// values use the same words.
+enum SubagentRole {
+  expert,
+  worker;
+
+  String get configKey => name;
+}
+
+/// One model in a role's pool, with the number of runs that model may serve
+/// at the same time.
+///
+/// Concurrency belongs to the **model**, not to the role that picked it: two
+/// models in the same pool can carry different upstream limits (a flagship
+/// model may allow two concurrent requests while its flash sibling allows
+/// five), and the runtime must respect the limit of whichever model a run
+/// actually landed on.
+class SubagentModelEntry {
+  /// Composite `provider/model` key, as configured in the provider TOML.
+  final String model;
+
+  /// Maximum simultaneous runs on [model]. Always at least one.
+  final int concurrency;
+
+  /// Reasoning effort every run on this pool model uses: one of the
+  /// model's reasoning presets (`off` / `low` / `normal` / `high` /
+  /// `max`). Defaults to `normal`. Read at dispatch time, so a pool
+  /// edit applies from the next run a pool model serves.
+  final String reasoningEffort;
+
+  const SubagentModelEntry({
+    required this.model,
+    this.concurrency = 1,
+    this.reasoningEffort = 'normal',
+  }) : assert(concurrency > 0);
+
+  SubagentModelEntry copyWith({int? concurrency, String? reasoningEffort}) =>
+      SubagentModelEntry(
+        model: model,
+        concurrency: concurrency ?? this.concurrency,
+        reasoningEffort: reasoningEffort ?? this.reasoningEffort,
+      );
+
+  Map<String, dynamic> toJson() => {
+    'model': model,
+    'concurrency': concurrency,
+    'reasoning_effort': reasoningEffort,
+  };
+
+  /// Parses one entry, returning null for anything unusable (missing model,
+  /// non-positive concurrency falls back to a single slot, unknown effort
+  /// falls back to the `normal` default).
+  static SubagentModelEntry? fromJson(Object? value) {
+    if (value is! Map) return null;
+    final model = value['model'];
+    if (model is! String || model.trim().isEmpty) return null;
+    final rawConcurrency = value['concurrency'];
+    const knownEfforts = {'off', 'low', 'normal', 'high', 'max'};
+    final rawEffort = value['reasoning_effort'];
+    return SubagentModelEntry(
+      model: model,
+      concurrency: rawConcurrency is int && rawConcurrency > 0
+          ? rawConcurrency
+          : 1,
+      reasoningEffort: rawEffort is String && knownEfforts.contains(rawEffort)
+          ? rawEffort
+          : 'normal',
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is SubagentModelEntry &&
+      other.model == model &&
+      other.concurrency == concurrency &&
+      other.reasoningEffort == reasoningEffort;
+
+  @override
+  int get hashCode => Object.hash(model, concurrency, reasoningEffort);
+
+  @override
+  String toString() =>
+      'SubagentModelEntry($model x$concurrency, '
+      'effort $reasoningEffort)';
+}
+
+/// User-level configuration for one subagent role: an ordered model pool.
+///
+/// Pool order does not determine model-selection priority. After excluding
+/// exhausted models and full entries, a hire is chosen randomly with each
+/// model weighted by its remaining concurrency slots. The written order is
+/// retained only as a stable display/tie order. Every entry carries its own
+/// concurrency, so the pool is the single source of truth for both "which
+/// models may run" and "how many of them at once".
+///
+/// An empty pool means the role has not been configured, so callers must not
+/// start a run for it.
+class SubagentModelConfig {
+  final List<SubagentModelEntry> models;
+
+  const SubagentModelConfig({this.models = const []});
+
+  bool get isConfigured =>
+      models.isNotEmpty && models.every((entry) => entry.model.isNotEmpty);
+
+  /// The pool's model ids in configured display order.
+  List<String> get modelIds => [for (final entry in models) entry.model];
+
+  /// The first configured model, for display/default presentation only.
+  ///
+  /// This is not a model-selection preference: hires are weighted by free
+  /// concurrency after budget filtering. Only valid when [isConfigured].
+  String get primaryModel => models.first.model;
+
+  SubagentModelEntry? entryFor(String model) {
+    for (final entry in models) {
+      if (entry.model == model) return entry;
+    }
+    return null;
+  }
+
+  /// How many runs [model] may serve at once.
+  ///
+  /// A model outside the pool is capped at one: an assignment restored from a
+  /// row that predates per-model concurrency, or one whose model was removed
+  /// from the pool, must never exceed the conservative default.
+  int concurrencyFor(String model) => entryFor(model)?.concurrency ?? 1;
+
+  /// Index of the first pool entry that still has a free slot, or null when
+  /// every model is saturated.
+  ///
+  /// This helper preserves configured display order; hire selection instead
+  /// uses all free entries with remaining-slot weights.
+  int? firstIndexWithCapacity(int Function(String model) runningForModel) {
+    for (var index = 0; index < models.length; index++) {
+      final entry = models[index];
+      if (runningForModel(entry.model) < entry.concurrency) return index;
+    }
+    return null;
+  }
+
+  SubagentModelConfig copyWith({List<SubagentModelEntry>? models}) =>
+      SubagentModelConfig(models: models ?? this.models);
+
+  @override
+  bool operator ==(Object other) {
+    if (other is! SubagentModelConfig) return false;
+    if (other.models.length != models.length) return false;
+    for (var index = 0; index < models.length; index++) {
+      if (other.models[index] != models[index]) return false;
+    }
+    return true;
+  }
+
+  @override
+  int get hashCode => Object.hashAll(models);
+
+  @override
+  String toString() => 'SubagentModelConfig(${models.join(', ')})';
+}
+
+/// The complete `[subagent]` section of user `config.toml`.
+///
+/// v2 keys: `workers` and `experts` (each an ordered model pool). The v1
+/// `advisor` key is read as an alias for `experts` so an existing config
+/// file migrates silently on first save.
+class SubagentConfig {
+  final SubagentModelConfig workers;
+  final SubagentModelConfig experts;
+
+  /// Agent-run round limit: how many LLM rounds one subagent run may
+  /// take before it is stopped and told to report what it has.
+  /// `null` means no cap (∞ unlimited). Defaults to 40 when the
+  /// config omits the key; persisted as `max_rounds` in the
+  /// `[subagent]` section.
+  final int? maxRounds;
+
+  const SubagentConfig({
+    this.workers = const SubagentModelConfig(),
+    this.experts = const SubagentModelConfig(),
+    this.maxRounds = 40,
+  });
+
+  SubagentModelConfig forRole(SubagentRole role) => switch (role) {
+    SubagentRole.worker => workers,
+    SubagentRole.expert => experts,
+  };
+
+  SubagentConfig copyWith({
+    SubagentModelConfig? workers,
+    SubagentModelConfig? experts,
+    int? maxRounds,
+  }) => SubagentConfig(
+    workers: workers ?? this.workers,
+    experts: experts ?? this.experts,
+    maxRounds: maxRounds ?? this.maxRounds,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is SubagentConfig &&
+      other.workers == workers &&
+      other.experts == experts &&
+      other.maxRounds == maxRounds;
+
+  @override
+  int get hashCode => Object.hash(workers, experts, maxRounds);
+}

@@ -1,0 +1,7 @@
+name: crux_agent_sdk
+description: Embeddable Dart agent runtime extracted from Crux with providers, streaming, tool execution and cancellation.
+version: 0.1.0
+publish_to: none
+repository: https://github.com/KoalaHao/crux-agent-sdk
+environment:
+  sdk: '>=3.10.0 <4.0.0'

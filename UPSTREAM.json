@@ -1,0 +1,125 @@
+{
+  "repository": "https://github.com/marsup-space/crux",
+  "revision": "3028f1b0da01ad11207f13e70bae68360acdecce",
+  "files": {
+    "models/coding_plan_usage.dart": {
+      "upstreamSha256": "4d72cce35bb45c41636b7ffbee02db17b9d1a7974193117f4e6a039c852c64f0",
+      "localSha256": "4d72cce35bb45c41636b7ffbee02db17b9d1a7974193117f4e6a039c852c64f0"
+    },
+    "models/credit_balance.dart": {
+      "upstreamSha256": "495b9e62cf3b2564bf8f7e3ad32da2ff856e32a87d968ea78459fba2f723b91e",
+      "localSha256": "495b9e62cf3b2564bf8f7e3ad32da2ff856e32a87d968ea78459fba2f723b91e"
+    },
+    "models/provider_config.dart": {
+      "upstreamSha256": "906b1cca301c6f558cfa57050180cce94f38750e55d7a078b13d12b2fb476e74",
+      "localSha256": "906b1cca301c6f558cfa57050180cce94f38750e55d7a078b13d12b2fb476e74"
+    },
+    "models/subagent.dart": {
+      "upstreamSha256": "96a0d25b84b3e3297cffab41a7c98084f90c860895d413d6e2e15a5f6105b35d",
+      "localSha256": "96a0d25b84b3e3297cffab41a7c98084f90c860895d413d6e2e15a5f6105b35d"
+    },
+    "services/codex_oauth.dart": {
+      "upstreamSha256": "d191ac032f5d1c60562a83cdcbd89d73a069653fd03f375ac87a512c78ef8b85",
+      "localSha256": "d191ac032f5d1c60562a83cdcbd89d73a069653fd03f375ac87a512c78ef8b85"
+    },
+    "services/coding_plan_usage_parser.dart": {
+      "upstreamSha256": "4336db9671e9d177c5d6f2679553d0f5be19adebedc35b59c251c5a758f6719d",
+      "localSha256": "4336db9671e9d177c5d6f2679553d0f5be19adebedc35b59c251c5a758f6719d"
+    },
+    "services/kimi_usage_parser.dart": {
+      "upstreamSha256": "8ddd54f4360db190cffd5826b6141870b463cb204cde0b516f2eefb37ad18e47",
+      "localSha256": "8ddd54f4360db190cffd5826b6141870b463cb204cde0b516f2eefb37ad18e47"
+    },
+    "services/llm_client.dart": {
+      "upstreamSha256": "1a28b001c78d9bc2318128c4742b39dfe236c197d1ca98f33ea8a53cd8ca0d70",
+      "localSha256": "337a31131452018f203c4561a0d6b9ae2df932d74111d64e83afbbf813ef2f96"
+    },
+    "services/llm_error.dart": {
+      "upstreamSha256": "b57fd898ba6f6e189e18b4e9597542342aacd7ad1c4f34189b718f8e5b9e22f4",
+      "localSha256": "b57fd898ba6f6e189e18b4e9597542342aacd7ad1c4f34189b718f8e5b9e22f4"
+    },
+    "services/llm_provider.dart": {
+      "upstreamSha256": "314940aede5a2fb8bff01418b4f2e5b101d363fb84e6eea53eab09047ad9134f",
+      "localSha256": "314940aede5a2fb8bff01418b4f2e5b101d363fb84e6eea53eab09047ad9134f"
+    },
+    "services/providers/anthropic_compatible_provider.dart": {
+      "upstreamSha256": "e6669cd7ab1dedced722454b6fa1c70553a4b4778939c3623506464380c4e61c",
+      "localSha256": "e6669cd7ab1dedced722454b6fa1c70553a4b4778939c3623506464380c4e61c"
+    },
+    "services/providers/codex_provider.dart": {
+      "upstreamSha256": "2386fe0df99fbe8f9dcbc78e8d8e38053aca81a6e89e1853608e041d3ac59110",
+      "localSha256": "05ffa7bb6b1c0f623ed56b7edffccffbce691f3a0098ec840d42943f037c01e9"
+    },
+    "services/providers/coding_plan_provider.dart": {
+      "upstreamSha256": "c4aa700238fbca7dcaf277960c1f60ec061b7ef772cda0fae5fe91b2aa2a8018",
+      "localSha256": "c4aa700238fbca7dcaf277960c1f60ec061b7ef772cda0fae5fe91b2aa2a8018"
+    },
+    "services/providers/credit_balance_provider.dart": {
+      "upstreamSha256": "164c3cbcda65dd7ebb0909a0429d747cc4baab3d8f50c16240c0367cce056636",
+      "localSha256": "164c3cbcda65dd7ebb0909a0429d747cc4baab3d8f50c16240c0367cce056636"
+    },
+    "services/providers/deepseek_provider.dart": {
+      "upstreamSha256": "0d1e758e2db75b81992b8e2063f835e74a23f0df5305ba30d3d709e2992dcb33",
+      "localSha256": "0d1e758e2db75b81992b8e2063f835e74a23f0df5305ba30d3d709e2992dcb33"
+    },
+    "services/providers/kimi_provider.dart": {
+      "upstreamSha256": "e4687b0f2c1f6e7cca4abc17c27c0b83891367a2d224f58e776bece8568a3e86",
+      "localSha256": "e4687b0f2c1f6e7cca4abc17c27c0b83891367a2d224f58e776bece8568a3e86"
+    },
+    "services/providers/mimo_provider.dart": {
+      "upstreamSha256": "3d92bb603e8c02ee84ecf2e8c98a847a5af61267afd6e9bd88c4f249bea13b3f",
+      "localSha256": "3d92bb603e8c02ee84ecf2e8c98a847a5af61267afd6e9bd88c4f249bea13b3f"
+    },
+    "services/providers/minimax_provider.dart": {
+      "upstreamSha256": "6cd40c323bdd0e58c13fe8cde3d7ff98e1f1d99539e4ffbf2a2672fc0c1400f5",
+      "localSha256": "6cd40c323bdd0e58c13fe8cde3d7ff98e1f1d99539e4ffbf2a2672fc0c1400f5"
+    },
+    "services/providers/openai_compatible_provider.dart": {
+      "upstreamSha256": "6f23c1985abf8503ccc2aad7f8f39c433d57efaf3f5ed6a2e85d70f29aa7531d",
+      "localSha256": "6f23c1985abf8503ccc2aad7f8f39c433d57efaf3f5ed6a2e85d70f29aa7531d"
+    },
+    "services/providers/zhipu_provider.dart": {
+      "upstreamSha256": "ae7c24e937befe479faf500842659b2b61c69585cd25be471757608d6607bf90",
+      "localSha256": "ae7c24e937befe479faf500842659b2b61c69585cd25be471757608d6607bf90"
+    },
+    "services/subagent/subagent_distiller.dart": {
+      "upstreamSha256": "de71104493f45803ee53243731c1c3b60826508126a9f9f0ba2dfb7109e3d290",
+      "localSha256": "de71104493f45803ee53243731c1c3b60826508126a9f9f0ba2dfb7109e3d290"
+    },
+    "services/subagent/subagent_prompts.dart": {
+      "upstreamSha256": "73f39540e1e92b59054be7fc0cd7beec349177c777513a3eadc8481436adbbf5",
+      "localSha256": "2e5ba0d7ffc513dc870dd46884fcba4a9dc3ff7295368a9bfffe2f7ad5f589dc"
+    },
+    "services/subagent/subagent_runner.dart": {
+      "upstreamSha256": "2c5b9d82f3764b5edabcb791cd12918d35dd34af637dd3e682de1dedf1959f9d",
+      "localSha256": "c70aad1c055c211c1f7695f6610d5228ce55cc46e56f43697094844dd5317797"
+    },
+    "services/zhipu_usage_parser.dart": {
+      "upstreamSha256": "9d930430adc0002d46c87e5b4af101a61996ff0ab1fe1459ae3e85a424ef31dd",
+      "localSha256": "9d930430adc0002d46c87e5b4af101a61996ff0ab1fe1459ae3e85a424ef31dd"
+    },
+    "utils/proxy_aware_http.dart": {
+      "upstreamSha256": "a6ae494b7b61675cbfc4e1fa6a286fed7c9842eb7f5a2ae6d0e0783ae5974008",
+      "localSha256": "a6ae494b7b61675cbfc4e1fa6a286fed7c9842eb7f5a2ae6d0e0783ae5974008"
+    },
+    "utils/system_proxy.dart": {
+      "upstreamSha256": "6b928ef6a2cf0bf7c80510bd70f39b8b73fa9dd22a0c1d0265ade6f9226e18ce",
+      "localSha256": "6b928ef6a2cf0bf7c80510bd70f39b8b73fa9dd22a0c1d0265ade6f9226e18ce"
+    },
+    "utils/token_estimate.dart": {
+      "upstreamSha256": "8a8381d726217213bb589129d7545839aa618b5a456017a4f29f0204a136d8df",
+      "localSha256": "8a8381d726217213bb589129d7545839aa618b5a456017a4f29f0204a136d8df"
+    },
+    "services/tool_executor.dart": {
+      "upstreamSha256": "d05af002959745ae707f7207873ebdaed3b05fd3b84e3075bc7b0619c45059b3",
+      "localSha256": "690b5c5845310f48d207a2b0b48bf050f250dc693f89dc2ea300a847ace073be"
+    }
+  },
+  "extraction": {
+    "package": "crux_agent_sdk",
+    "version": "0.1.0",
+    "sourceLayout": "lib/src/<upstream-relative-path>",
+    "hostBoundary": "Host injects providers, credentials, tools, persistence callbacks; no HarmonyAI dependency",
+    "removedDesktopIntegration": "Codex quota app-server subprocess and executable discovery; HTTP provider transport retained"
+  }
+}
