@@ -66,7 +66,7 @@ Future<void> main() async {
   body = kimi.buildRequestBody('k3-256k', [], maxTokens: 1234);
   check(
     body['model'] == 'k3-256k' &&
-        body['max_tokens'] == 1234 &&
+        body['max_completion_tokens'] == 1234 &&
         body['temperature'] == 1,
     'Kimi ID and output cap',
   );

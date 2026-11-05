@@ -38,7 +38,7 @@ behavior to preserve compatibility. `AgentRunner` accepts `temperature`, `topP`
 and `maxTokens`, including on its round-cap reporting request.
 
 Kimi preserves the official `k3-256k` ID, retains legacy `k3-1m` mapping,
-forwards the output cap, and sends an honest SDK User-Agent. K3.1 Pro rejects
+forwards the output cap (`max_completion_tokens` for K3, `max_tokens` for K2), and sends an honest SDK User-Agent. K3.1 Pro rejects
 thinking-off locally. Fixed Kimi sampling follows the existing Crux adapter.
 No provider account or membership entitlements are assumed.
 
@@ -54,3 +54,5 @@ Official references checked 2026-11-05:
 Validation: `dart analyze`, `dart run test/sdk_test.dart`, and
 `dart run test/provider_accounts_test.dart`. Tests use local fixtures and
 synthetic keys; live provider accounts are not exercised.
+
+K3 parameter reference: https://platform.kimi.ai/docs/guide/kimi-k3-quickstart

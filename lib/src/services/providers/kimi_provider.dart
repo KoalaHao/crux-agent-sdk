@@ -180,7 +180,12 @@ class KimiProvider extends OpenAICompatibleProvider with CodingPlanProvider {
     // reference implementation's wire shape.
     body.remove('user_id');
     final cap = body.remove('max_completion_tokens');
-    if (cap != null) body['max_tokens'] = cap;
+    if (cap != null) {
+      body[upstreamId.startsWith('k3')
+              ? 'max_completion_tokens'
+              : 'max_tokens'] =
+          cap;
+    }
     if (_isK27HighSpeed(upstreamId)) {
       body.remove('reasoning_effort');
     }
