@@ -12,3 +12,7 @@ export 'src/services/subagent/subagent_runner.dart'
     show AgentRunner, SubagentRunStatus;
 export 'src/services/subagent/subagent_distiller.dart'
     show DistillationProducts;
+
+export 'src/services/provider_account_client.dart';
+export 'src/models/credit_balance.dart';
+export 'src/models/coding_plan_usage.dart';

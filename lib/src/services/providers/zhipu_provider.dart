@@ -70,6 +70,9 @@ import 'openai_compatible_provider.dart';
 class ZhipuProvider extends OpenAICompatibleProvider with CodingPlanProvider {
   @override
   String get name => 'zhipu';
+  @override
+  String mapEffort(String? effort) =>
+      effort == 'low' ? 'low' : super.mapEffort(effort);
 
   @override
   AuthStyle get authStyle => AuthStyle.bearer;
@@ -105,6 +108,7 @@ class ZhipuProvider extends OpenAICompatibleProvider with CodingPlanProvider {
       tools: tools,
       userId: userId,
     );
+    body.remove('user_id');
     final maxCompletion = body.remove('max_completion_tokens');
     if (maxCompletion != null) {
       body['max_tokens'] = maxCompletion;

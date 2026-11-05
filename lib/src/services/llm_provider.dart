@@ -1,5 +1,7 @@
 import '../models/provider_config.dart';
 import 'providers/anthropic_compatible_provider.dart';
+import 'providers/openai_api_provider.dart';
+import 'providers/deepseek_chat_provider.dart';
 import 'providers/codex_provider.dart';
 import 'providers/deepseek_provider.dart';
 import 'providers/kimi_provider.dart';
@@ -369,6 +371,18 @@ ResolvedProvider resolveProvider(String type) {
         wire: WireFamily.anthropicCompatible,
         authStyle: AuthStyle.anthropicApiKey,
       );
+    case 'openai':
+      return ResolvedProvider(
+        provider: OpenAIApiProvider(),
+        wire: WireFamily.openaiCompatible,
+        authStyle: AuthStyle.bearer,
+      );
+    case 'deepseek_chat':
+      return ResolvedProvider(
+        provider: DeepSeekChatProvider(),
+        wire: WireFamily.openaiCompatible,
+        authStyle: AuthStyle.bearer,
+      );
     case 'deepseek':
       // DeepSeek's Responses API replaces Chat Completions as of
       // deepseek-v4-flash (2026-07). The endpoint is
@@ -428,6 +442,8 @@ ResolvedProvider resolveProvider(String type) {
 }
 
 List<String> knownProviderTypes() => [
+  'openai',
+  'deepseek_chat',
   'openai_compatible',
   'anthropic_compatible',
   'deepseek',

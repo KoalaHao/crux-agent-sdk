@@ -135,6 +135,12 @@ CodingPlanUsage parseZhipuUsageResponse(
   final intervalRow = _findRow(rows, type: 'TOKENS_LIMIT', unit: 3);
   final weeklyRow = _findRow(rows, type: 'TOKENS_LIMIT', unit: 6);
 
+  if (intervalRow == null && weeklyRow == null) {
+    throw const CodingPlanUsageError(
+      CodingPlanUsageErrorKind.parse,
+      'No supported quota windows',
+    );
+  }
   final interval = _rowToSnapshot(intervalRow);
   final weekly = _rowToSnapshot(weeklyRow);
 
@@ -151,6 +157,8 @@ CodingPlanUsage parseZhipuUsageResponse(
   return CodingPlanUsage(
     providerName: providerName,
     modelName: modelName,
+    hasIntervalWindow: intervalRow != null,
+    hasWeeklyWindow: weeklyRow != null,
     intervalRemainingPct: interval.remainingPct,
     weeklyRemainingPct: weekly.remainingPct,
     intervalRemains: interval.resetIn,
@@ -187,9 +195,16 @@ Map<String, dynamic>? _findRow(
 _ZhipuUsageSnapshot _rowToSnapshot(Map<String, dynamic>? row) {
   if (row == null) return const _ZhipuUsageSnapshot();
   final percentage = row['percentage'];
-  final remainingPct = percentage is num
-      ? (100 - percentage).toInt().clamp(0, 100)
-      : 0;
+  if (percentage is! num ||
+      !percentage.isFinite ||
+      percentage < 0 ||
+      percentage > 100) {
+    throw const CodingPlanUsageError(
+      CodingPlanUsageErrorKind.parse,
+      'Invalid quota percentage',
+    );
+  }
+  final remainingPct = (100 - percentage).toInt().clamp(0, 100);
   return _ZhipuUsageSnapshot(
     remainingPct: remainingPct,
     resetIn: _resetInDuration(row),

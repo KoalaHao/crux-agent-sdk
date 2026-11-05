@@ -18,13 +18,13 @@ import 'openai_compatible_provider.dart';
 /// [OpenAICompatibleProvider] and reuse the URL / stream / message
 /// sanitization plumbing), but with three Kimi-specific quirks:
 ///
-/// 1. **K3 model-ID remap.** K3 is exposed to users as two
+/// 1. **K3 model-ID remap.** Legacy Crux exposed K3 as two
 ///    composite Crux entries (`k3-1m` and `k3-256k`) so the user
 ///    can pick the context size their Kimi Code plan grants them
 ///    (Allegretto+ = up to 1M; Moderato = up to 256K). Kimi's API
 ///    only recognizes a single `model: "k3"` ID — the plan tier
-///    decides the server-side context cap. We translate both
-///    Crux-side IDs to `k3` on the wire.
+///    decides the server-side context cap. Only legacy `k3-1m` maps to `k3`; the current official `k3-256k`
+///    is preserved verbatim.
 ///
 /// 2. **K2.7 HighSpeed binary thinking.** Only
 ///    `kimi-for-coding-highspeed` remains on K2.7 and is
@@ -81,6 +81,11 @@ class KimiProvider extends OpenAICompatibleProvider with CodingPlanProvider {
   String get name => 'kimi';
 
   @override
+  Map<String, String> requestHeaders({String? userId}) => const {
+    'User-Agent': 'Crux-Agent-SDK/0.1',
+  };
+
+  @override
   AuthStyle get authStyle => AuthStyle.bearer;
 
   @override
@@ -92,7 +97,7 @@ class KimiProvider extends OpenAICompatibleProvider with CodingPlanProvider {
   /// K3 is one upstream model; we expose it twice (1M and 256K
   /// context) so the user can match the variant to their plan's
   /// granted context window.
-  static const Set<String> _k3CruxIds = {'k3-1m', 'k3-256k'};
+  static const Set<String> _k3CruxIds = {'k3-1m'};
 
   /// The K2.7 HighSpeed model is binary-thinking only. The standard
   /// `kimi-for-coding` ID was upgraded server-side to K2.8 Preview.
@@ -141,12 +146,16 @@ class KimiProvider extends OpenAICompatibleProvider with CodingPlanProvider {
     // unchanged.
     final upstreamId = _k3CruxIds.contains(modelId) ? 'k3' : modelId;
 
+    if (upstreamId.startsWith('k3.1-pro') && thinkingMode == 'disabled') {
+      throw ArgumentError('K3.1 Pro requires thinking mode.');
+    }
     final body = super.buildRequestBody(
       upstreamId,
       messages,
       thinkingMode: thinkingMode,
       reasoningEffort: reasoningEffort,
       thinkingBudget: thinkingBudget,
+      maxTokens: maxTokens,
       // Force `temperature = 1.0` for every Kimi model — the
       // API rejects any other value with
       // `400 invalid temperature: only 1 is allowed for this model`.
@@ -169,6 +178,9 @@ class KimiProvider extends OpenAICompatibleProvider with CodingPlanProvider {
     // SDK never sends `reasoning_effort` for these models — strip
     // it from our generic OpenAI-compatible body so we match the
     // reference implementation's wire shape.
+    body.remove('user_id');
+    final cap = body.remove('max_completion_tokens');
+    if (cap != null) body['max_tokens'] = cap;
     if (_isK27HighSpeed(upstreamId)) {
       body.remove('reasoning_effort');
     }

@@ -41,17 +41,9 @@ import 'coding_plan_usage_parser.dart';
 /// }
 /// ```
 ///
-/// The toolbar renders exactly two cells (the 5h short window
-/// and the 1w weekly window) so we map:
-///
-/// * `interval` ← the `limits[]` row with the **shortest**
-///   window. When the array has only one row, both cells
-///   read from it.
-/// * `weekly` ← the `limits[]` row with the **longest**
-///   window. When the array has only one row, the same row
-///   fills both cells.
-/// * `modelName` ← `usage.name` (e.g. `"Weekly limit"`), used
-///   for hover-hint diagnostics.
+/// Recognized five-hour and weekly windows remain distinct. A summary-only
+/// response supplies the weekly slot; an absent slot is marked unavailable.
+/// Unknown window durations are not relabeled as a known quota window.
 ///
 /// ## Field-name tolerance
 ///
@@ -144,54 +136,21 @@ CodingPlanUsage _fromKimiLimitsShape(
       ? payload['usage'] as Map<String, dynamic>
       : null;
 
-  // Sort `limits[]` by window duration and pick the two
-  // ends. Rows without a `window` field sort to the end
-  // (treated as "no specific time bound") so they don't
-  // grab the interval slot unless every row lacks a
-  // window.
-  final sorted = [...rows]
-    ..sort((a, b) {
-      final da = _windowSeconds(a);
-      final db = _windowSeconds(b);
-      // nulls last; among non-nulls, ascending.
-      if (da == null && db == null) return 0;
-      if (da == null) return 1;
-      if (db == null) return -1;
-      return da.compareTo(db);
-    });
-
-  // Interval cell = shortest window in `limits[]`. If
-  // `limits[]` is empty (and we got here only because the
-  // caller supplied a single-element list from the
-  // top-level `usage`), the interval cell reads from
-  // `usage` too — see the summary-only case below.
-  final intervalRow = sorted.first;
-
-  // Weekly cell: prefer the longest window in `limits[]`
-  // when the array has more than one distinct window
-  // duration, fall back to the top-level `usage` block
-  // (which Kimi documents as the "Weekly limit" summary)
-  // when `limits[]` has only one row, fall back to
-  // duplicating the interval row only when neither is
-  // available. The middle branch is the one the user
-  // actually hit: real-world Kimi payloads often ship a
-  // 5h row in `limits[]` plus a weekly summary in
-  // `usage` — duplicating the 5h row to the weekly slot
-  // is the regression that motivated this rewrite.
-  final hasDistinctWindows =
-      sorted.length > 1 &&
-      _windowSeconds(sorted.first) != _windowSeconds(sorted.last);
-  final Map<String, dynamic> weeklyRow;
-  if (hasDistinctWindows) {
-    weeklyRow = sorted.last;
-  } else if (usageBlock != null && usageBlock != intervalRow) {
-    weeklyRow = usageBlock;
-  } else {
-    weeklyRow = intervalRow;
+  Map<String, dynamic>? intervalRow;
+  Map<String, dynamic>? weeklyRow = usageBlock;
+  for (final row in rows) {
+    final seconds = _windowSeconds(row);
+    if (seconds == 18000) intervalRow = row;
+    if (seconds == 604800) weeklyRow = row;
   }
-
-  final interval = _toKimiUsageRow(intervalRow);
-  final weekly = _toKimiUsageRow(weeklyRow);
+  if (intervalRow == null && weeklyRow == null) {
+    throw const CodingPlanUsageError(
+      CodingPlanUsageErrorKind.parse,
+      'No recognized quota windows',
+    );
+  }
+  final interval = intervalRow == null ? null : _toKimiUsageRow(intervalRow);
+  final weekly = weeklyRow == null ? null : _toKimiUsageRow(weeklyRow);
 
   final modelName = usageBlock != null
       ? (usageBlock['name']?.toString() ?? providerName)
@@ -200,10 +159,12 @@ CodingPlanUsage _fromKimiLimitsShape(
   return CodingPlanUsage(
     providerName: providerName,
     modelName: modelName,
-    intervalRemainingPct: interval.remainingPct,
-    weeklyRemainingPct: weekly.remainingPct,
-    intervalRemains: interval.resetIn,
-    weeklyRemains: weekly.resetIn,
+    hasIntervalWindow: interval != null,
+    hasWeeklyWindow: weekly != null,
+    intervalRemainingPct: interval?.remainingPct ?? 0,
+    weeklyRemainingPct: weekly?.remainingPct ?? 0,
+    intervalRemains: interval?.resetIn,
+    weeklyRemains: weekly?.resetIn,
     fetchedAt: DateTime.now(),
   );
 }
@@ -228,8 +189,14 @@ _KimiUsageRow _toKimiUsageRow(Map<String, dynamic> row) {
       used = limit - remaining;
     }
   }
-  final effectiveUsed = used ?? 0;
-  final effectiveLimit = limit ?? 0;
+  if (limit == null || limit <= 0 || used == null || used < 0) {
+    throw const CodingPlanUsageError(
+      CodingPlanUsageErrorKind.parse,
+      'Missing or invalid quota counters',
+    );
+  }
+  final effectiveUsed = used;
+  final effectiveLimit = limit;
   final remainingPct = effectiveLimit > 0
       ? ((effectiveLimit - effectiveUsed) * 100 / effectiveLimit)
             .clamp(0, 100)

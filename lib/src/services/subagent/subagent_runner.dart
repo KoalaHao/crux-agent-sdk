@@ -71,6 +71,8 @@ class AgentRunner {
   /// `normal`). `off` disables thinking entirely. Captured at dispatch:
   /// a pool edit applies from the NEXT run, never the live one.
   final String reasoningEffort;
+  final double temperature, topP;
+  final int? maxTokens;
   final String userLanguage;
   final String workingDirectory;
   final int sessionId;
@@ -118,6 +120,9 @@ class AgentRunner {
     this.onHistory,
     this.initialHistory,
     this.reasoningEffort = 'normal',
+    this.temperature = 0,
+    this.topP = 1,
+    this.maxTokens,
     this.userLanguage = 'English',
     this.contextCapacity = 128000,
     this.onDistilled,
@@ -257,6 +262,9 @@ class AgentRunner {
           apiKey: apiKey,
           modelId: modelId,
           messages: history,
+          temperature: temperature,
+          topP: topP,
+          maxTokens: maxTokens,
           thinkingMode: thinkingMode,
           reasoningEffort: wireEffort,
           tools: _toolsDefinition(),
@@ -451,6 +459,9 @@ class AgentRunner {
           apiKey: apiKey,
           modelId: modelId,
           messages: history,
+          temperature: temperature,
+          topP: topP,
+          maxTokens: maxTokens,
           thinkingMode: thinkingMode,
           reasoningEffort: reasoningEffort,
           tools: _toolsDefinition(), // Same list: cache-friendly.
