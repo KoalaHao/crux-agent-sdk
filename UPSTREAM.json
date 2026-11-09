@@ -60,7 +60,7 @@
     },
     "services/providers/deepseek_provider.dart": {
       "upstreamSha256": "0d1e758e2db75b81992b8e2063f835e74a23f0df5305ba30d3d709e2992dcb33",
-      "localSha256": "0d1e758e2db75b81992b8e2063f835e74a23f0df5305ba30d3d709e2992dcb33"
+      "localSha256": "fe3e024804be7ff1d90d129c0156edd5afb6eae53961f503442b3fb1a5808218"
     },
     "services/providers/kimi_provider.dart": {
       "upstreamSha256": "e4687b0f2c1f6e7cca4abc17c27c0b83891367a2d224f58e776bece8568a3e86",

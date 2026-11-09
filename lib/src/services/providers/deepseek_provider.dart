@@ -83,7 +83,7 @@ class DeepSeekProvider extends LlmProvider with CreditBalanceProvider {
   ///     are concatenated; the Responses API only accepts a single
   ///     `instructions` string.
   ///   - `{role: 'user'|'assistant', content}` — emitted as a
-  ///     `{role, content}` input item. We drop a `null` content
+  ///     `{type: 'message', role, content}` input item. We drop a `null` content
   ///     rather than passing it through (the Responses API expects a
   ///     string for a `message` item).
   ///   - `{role: 'assistant', tool_calls: [...]}` — translated to a
@@ -160,6 +160,7 @@ class DeepSeekProvider extends LlmProvider with CreditBalanceProvider {
         final content = m['content'];
         if (content is String && content.isNotEmpty) {
           input.add({
+            'type': 'message',
             'role': 'assistant',
             'content': [
               {'type': 'output_text', 'text': content},
@@ -193,6 +194,7 @@ class DeepSeekProvider extends LlmProvider with CreditBalanceProvider {
       final content = m['content'];
       if (content is String) {
         input.add({
+          'type': 'message',
           'role': role ?? 'user',
           'content': [
             {'type': 'input_text', 'text': content},
@@ -236,7 +238,11 @@ class DeepSeekProvider extends LlmProvider with CreditBalanceProvider {
           }
         }
         if (parts.isNotEmpty) {
-          input.add({'role': role ?? 'user', 'content': parts});
+          input.add({
+            'type': 'message',
+            'role': role ?? 'user',
+            'content': parts,
+          });
         }
       }
     }
@@ -535,5 +541,4 @@ class DeepSeekProvider extends LlmProvider with CreditBalanceProvider {
   ///   ]
   /// }
   /// ```
-
 }
