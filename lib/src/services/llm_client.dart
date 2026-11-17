@@ -277,6 +277,7 @@ class LlmClient {
     LlmStreamCancelToken? cancelToken,
 
     /// Host-supplied body fields merged into the provider-built request last.
+    /// A null value removes the field.
     /// Keys the wire owns (`model`, `messages`, `input`, `tools`, `stream`)
     /// are dropped, so a host can pass a user-configured tier (`temperature`,
     /// `reasoning_effort`, …) without being able to break the envelope.
@@ -420,7 +421,14 @@ class LlmClient {
             if (extraBody != null) {
               for (final MapEntry<String, dynamic> e in extraBody.entries) {
                 if (_hostOwnedBodyKeys.contains(e.key)) continue;
-                bodyMap[e.key] = e.value;
+                // A null value removes the field instead of replacing it, so a
+                // host can say "leave this to the endpoint" (the provider
+                // bodies fill temperature/top_p with defaults otherwise).
+                if (e.value == null) {
+                  bodyMap.remove(e.key);
+                } else {
+                  bodyMap[e.key] = e.value;
+                }
               }
             }
             final body = jsonEncode(bodyMap);
