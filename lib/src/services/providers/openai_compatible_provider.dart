@@ -36,7 +36,10 @@ class OpenAICompatibleProvider extends LlmProvider {
       // altering either this OR temperature (we pair them
       // automatically).
       'top_p': topP,
-      if (thinkingMode == 'enabled') 'thinking': {'type': thinkingMode},
+      // 'auto' means "let the endpoint decide" — omit the field entirely so
+      // a host that drives reasoning through the body (per-model tiers) does
+      // not send a competing thinking switch.
+      if (thinkingMode != 'auto') 'thinking': {'type': thinkingMode},
       if (thinkingMode != 'disabled' && reasoningEffort != null)
         'reasoning_effort': mapEffort(reasoningEffort),
       'max_completion_tokens': ?maxTokens,
