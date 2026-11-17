@@ -8,6 +8,17 @@ import '../utils/system_proxy.dart' show SystemProxyDetector;
 import 'llm_error.dart';
 import 'llm_provider.dart';
 
+/// Body keys the wire envelope owns; a host `extraBody` may never replace
+/// them.
+const Set<String> _hostOwnedBodyKeys = <String>{
+  'model',
+  'messages',
+  'input',
+  'tools',
+  'stream',
+  'stream_options',
+};
+
 /// Format a duration for the "Stream exceeded N …" error message.
 ///
 /// Picks the most natural unit so the message stays readable when
@@ -264,6 +275,12 @@ class LlmClient {
     List<Map<String, dynamic>>? tools,
     String? userId,
     LlmStreamCancelToken? cancelToken,
+
+    /// Host-supplied body fields merged into the provider-built request last.
+    /// Keys the wire owns (`model`, `messages`, `input`, `tools`, `stream`)
+    /// are dropped, so a host can pass a user-configured tier (`temperature`,
+    /// `reasoning_effort`, …) without being able to break the envelope.
+    Map<String, dynamic>? extraBody,
   }) {
     final controller = StreamController<LlmChunk>();
     final resolved = resolveProvider(config.type);
@@ -400,6 +417,12 @@ class LlmClient {
               tools: tools,
               userId: userId,
             );
+            if (extraBody != null) {
+              for (final MapEntry<String, dynamic> e in extraBody.entries) {
+                if (_hostOwnedBodyKeys.contains(e.key)) continue;
+                bodyMap[e.key] = e.value;
+              }
+            }
             final body = jsonEncode(bodyMap);
             final bodyBytes = utf8.encode(body);
             request.headers.set('Content-Length', bodyBytes.length.toString());

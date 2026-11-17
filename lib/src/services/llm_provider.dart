@@ -8,6 +8,7 @@ import 'providers/kimi_provider.dart';
 import 'providers/minimax_provider.dart';
 import 'providers/mimo_provider.dart';
 import 'providers/openai_compatible_provider.dart';
+import 'providers/responses_api_provider.dart';
 import 'providers/zhipu_provider.dart';
 
 /// A reasoning preset exposed to the user in the UI and `/think` command.
@@ -398,6 +399,14 @@ ResolvedProvider resolveProvider(String type) {
         wire: WireFamily.responsesApi,
         authStyle: AuthStyle.bearer,
       );
+    case 'responses':
+      // Generic OpenAI Responses API endpoint (`<base>/responses`), no
+      // vendor-specific headers or effort coercion.
+      return ResolvedProvider(
+        provider: ResponsesApiProvider(),
+        wire: WireFamily.responsesApi,
+        authStyle: AuthStyle.bearer,
+      );
     case 'codex':
       // ChatGPT Codex uses the OpenAI Responses wire, but its endpoint is
       // the ChatGPT backend rather than api.openai.com. CodexProvider adds
@@ -443,6 +452,7 @@ ResolvedProvider resolveProvider(String type) {
 
 List<String> knownProviderTypes() => [
   'openai',
+  'responses',
   'deepseek_chat',
   'openai_compatible',
   'anthropic_compatible',
@@ -462,6 +472,8 @@ String typeDisplayName(String type) {
       return 'Anthropic Compatible';
     case 'deepseek':
       return 'DeepSeek';
+    case 'responses':
+      return 'Responses';
     case 'codex':
       return 'Codex';
     case 'minimax':

@@ -36,7 +36,7 @@ class OpenAICompatibleProvider extends LlmProvider {
       // altering either this OR temperature (we pair them
       // automatically).
       'top_p': topP,
-      'thinking': {'type': thinkingMode},
+      if (thinkingMode == 'enabled') 'thinking': {'type': thinkingMode},
       if (thinkingMode != 'disabled' && reasoningEffort != null)
         'reasoning_effort': mapEffort(reasoningEffort),
       'max_completion_tokens': ?maxTokens,
@@ -61,10 +61,14 @@ class OpenAICompatibleProvider extends LlmProvider {
     switch (effort) {
       case 'normal':
         return 'high';
+      // Pass through the canonical ladder so a per-model tier keeps its own
+      // value instead of being flattened onto `high`.
+      case 'none':
+      case 'low':
+      case 'medium':
       case 'high':
-        return 'high';
       case 'max':
-        return 'max';
+        return effort!;
       default:
         return 'high';
     }
