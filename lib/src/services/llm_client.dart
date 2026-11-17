@@ -655,7 +655,22 @@ class LlmClient {
         // keepalive noise — skip them entirely so they neither parse
         // nor reset the data-idle watchdog.
         if (trimmed.isEmpty || trimmed.startsWith(':')) continue;
-        if (!trimmed.startsWith('data: ')) continue;
+        if (!trimmed.startsWith('data: ')) {
+          // A gateway can answer a streaming POST with one JSON envelope and
+          // status 200 (`{"success": false, "message": "…"}`). Reading it as
+          // "not a data: line" turns a real failure into a silent empty turn.
+          final LlmError? gatewayError =
+              gatewayBodyError(line: trimmed, providerName: providerName);
+          if (gatewayError != null) {
+            idleTimer.cancel();
+            maxTimer?.cancel();
+            dataIdleWatchdog.dispose();
+            controller.add(LlmChunk(error: gatewayError));
+            await controller.close();
+            return;
+          }
+          continue;
+        }
 
         final data = trimmed.substring(6);
         if (data == '[DONE]') {
@@ -766,6 +781,17 @@ class LlmClient {
     idleTimer?.cancel();
     maxTimer?.cancel();
     dataIdleWatchdog.dispose();
+    // A body with no trailing newline never becomes a "line": the tail has
+    // to be inspected too, or a single-envelope error body reads as success.
+    if (buffer.trim().isNotEmpty) {
+      final LlmError? tailError =
+          gatewayBodyError(line: buffer, providerName: providerName);
+      if (tailError != null) {
+        controller.add(LlmChunk(error: tailError));
+        await controller.close();
+        return;
+      }
+    }
     controller.add(const LlmChunk(finishReason: 'done'));
     await controller.close();
   }
@@ -878,7 +904,22 @@ class LlmClient {
         if (trimmed.isEmpty) continue;
         if (trimmed.startsWith(':')) continue;
         if (trimmed.startsWith('event: ')) continue;
-        if (!trimmed.startsWith('data: ')) continue;
+        if (!trimmed.startsWith('data: ')) {
+          // A gateway can answer a streaming POST with one JSON envelope and
+          // status 200 (`{"success": false, "message": "…"}`). Reading it as
+          // "not a data: line" turns a real failure into a silent empty turn.
+          final LlmError? gatewayError =
+              gatewayBodyError(line: trimmed, providerName: providerName);
+          if (gatewayError != null) {
+            idleTimer.cancel();
+            maxTimer?.cancel();
+            dataIdleWatchdog.dispose();
+            controller.add(LlmChunk(error: gatewayError));
+            await controller.close();
+            return;
+          }
+          continue;
+        }
 
         final data = trimmed.substring(6);
         if (data == '[DONE]') {
@@ -1029,6 +1070,17 @@ class LlmClient {
     idleTimer?.cancel();
     maxTimer?.cancel();
     dataIdleWatchdog.dispose();
+    // A body with no trailing newline never becomes a "line": the tail has
+    // to be inspected too, or a single-envelope error body reads as success.
+    if (buffer.trim().isNotEmpty) {
+      final LlmError? tailError =
+          gatewayBodyError(line: buffer, providerName: providerName);
+      if (tailError != null) {
+        controller.add(LlmChunk(error: tailError));
+        await controller.close();
+        return;
+      }
+    }
     controller.add(const LlmChunk(finishReason: 'done'));
     await controller.close();
   }
@@ -1105,7 +1157,22 @@ class LlmClient {
           eventType = trimmed.substring(7);
           continue;
         }
-        if (!trimmed.startsWith('data: ')) continue;
+        if (!trimmed.startsWith('data: ')) {
+          // A gateway can answer a streaming POST with one JSON envelope and
+          // status 200 (`{"success": false, "message": "…"}`). Reading it as
+          // "not a data: line" turns a real failure into a silent empty turn.
+          final LlmError? gatewayError =
+              gatewayBodyError(line: trimmed, providerName: providerName);
+          if (gatewayError != null) {
+            idleTimer?.cancel();
+            maxTimer?.cancel();
+            dataIdleWatchdog.dispose();
+            controller.add(LlmChunk(error: gatewayError));
+            await controller.close();
+            return;
+          }
+          continue;
+        }
 
         final data = trimmed.substring(6);
 
@@ -1221,6 +1288,17 @@ class LlmClient {
     idleTimer?.cancel();
     maxTimer?.cancel();
     dataIdleWatchdog.dispose();
+    // A body with no trailing newline never becomes a "line": the tail has
+    // to be inspected too, or a single-envelope error body reads as success.
+    if (buffer.trim().isNotEmpty) {
+      final LlmError? tailError =
+          gatewayBodyError(line: buffer, providerName: providerName);
+      if (tailError != null) {
+        controller.add(LlmChunk(error: tailError));
+        await controller.close();
+        return;
+      }
+    }
     controller.add(const LlmChunk(finishReason: 'done'));
     await controller.close();
   }

@@ -536,6 +536,55 @@ LlmError parseAnthropicStreamError({
 /// Chat Completions stream surfaces errors as a `data:` line whose
 /// JSON contains an `error` object with `message` / `type` /
 /// `code` / `param`.
+/// A plain-JSON envelope where an SSE stream was expected.
+///
+/// Some gateways answer a streaming POST with `200` and
+/// `content-type: text/event-stream`, but the body is one JSON object and
+/// nothing else — e.g. `{"success": false, "message": "系统内部错误，请联系管理员"}`.
+/// It carries no `data:` framing, so a reader that only looks at `data:` lines
+/// reports an empty answer and hides the failure.
+///
+/// Deliberately narrow: only a `success: false` envelope, or an `error`
+/// object with no payload keys beside it, counts as an error.
+LlmError? gatewayBodyError({
+  required String line,
+  String providerName = '',
+}) {
+  final String trimmed = line.trim();
+  if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) return null;
+  Map<String, dynamic>? json;
+  try {
+    final Object? decoded = jsonDecode(trimmed);
+    if (decoded is Map<String, dynamic>) json = decoded;
+  } on FormatException {
+    return null;
+  }
+  if (json == null) return null;
+
+  final bool looksLikePayload = json.containsKey('choices') ||
+      json.containsKey('output') ||
+      json.containsKey('type') ||
+      json.containsKey('content');
+  final Object? code = json['code'];
+  final bool failed = json['success'] == false ||
+      (json['error'] != null && !looksLikePayload) ||
+      // `{"msg": "…", "code": 500}` — status 200, failure in the envelope.
+      (code is int && code >= 400 && !looksLikePayload);
+  if (!failed) return null;
+
+  final String message = _asString(json['message']) ??
+      _asString(json['msg']) ??
+      (_asString(json['error']) ?? 'upstream rejected the request');
+  return LlmError(
+    kind: LlmErrorKind.serverError,
+    vendor: LlmVendorX.fromProviderName(providerName),
+    statusCode: null,
+    vendorCode: null,
+    message: message,
+    providerName: providerName,
+  );
+}
+
 LlmError parseOpenAiStreamError({
   required Map<String, dynamic> eventJson,
   String providerName = '',
