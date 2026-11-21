@@ -77,11 +77,20 @@ class AnthropicFixture {
             block as Map<String, dynamic>,
   ];
 
+  /// Every `tool_use` block inside the request's assistant messages —
+  /// the call side whose input params must survive compaction.
+  List<Map<String, dynamic>> toolUseBlocks(Map<String, dynamic> body) => [
+    for (final message in body['messages'] as List)
+      if (message is Map && message['role'] == 'assistant')
+        for (final block in _blocksOf(message))
+          if (block is Map && block['type'] == 'tool_use')
+            block as Map<String, dynamic>,
+  ];
+
   /// Length of the oversized payload this fixture serves for
-  /// `big.txt`, and the placeholder the compaction gate must write.
+  /// `big.txt`. Compaction blanks every output, so canonicalisation
+  /// folds the empty string into one sentinel.
   static const bigOutputChars = 20000;
-  static String get compactedPlaceholder =>
-      '[compacted — $bigOutputChars chars, read again if needed]';
   static const _compactedSentinel = '<compacted>';
 
   Set<String> toolUseIds(Map<String, dynamic> body) => {
@@ -110,7 +119,7 @@ class AnthropicFixture {
 
   dynamic _canonicalContent(dynamic content) {
     if (content is String) {
-      return content == compactedPlaceholder
+      return content.isEmpty
           ? _compactedSentinel
           : [
               {'type': 'text', 'text': content},
@@ -127,8 +136,7 @@ class AnthropicFixture {
     return {
       for (final entry in block.entries)
         if (entry.key != 'cache_control')
-          entry.key:
-              entry.key == 'content' && entry.value == compactedPlaceholder
+          entry.key: entry.key == 'content' && entry.value == ''
               ? _compactedSentinel
               : entry.value,
     };
@@ -153,10 +161,10 @@ class AnthropicFixture {
         // (a) the provider strips `system` out of `messages` and moves
         //     the `cache_control` marker onto the last message each
         //     round; (b) it rewrites the last message's string content
-        //     into a text block; (c) the compaction gate replaces
-        //     oversized tool_result payloads with the placeholder —
-        //     that rewrite is exactly the behavior under test. Any
-        //     OTHER history change still trips this guard.
+        //     into a text block; (c) the compaction gate blanks the
+        //     tool OUTPUT while keeping the tool_use input — that
+        //     rewrite is exactly the behavior under test. Any OTHER
+        //     history change still trips this guard.
         if (jsonEncode(
               _canonicalMessages(
                 (body['messages'] as List).take(prior.length).toList(),
@@ -328,11 +336,9 @@ Future<void> main() async {
       'opening request already carried tool results',
     );
 
-    // THE FIX: the round-2 request (built right after the gate
-    // compacted) must carry the placeholder instead of the 20000-char
-    // payload. Before the fix the Anthropic-shaped tool_result block
-    // was never rewritten and the full payload rode along forever.
-    final placeholder = AnthropicFixture.compactedPlaceholder;
+    // Round 2 is built right after the gate compacted. The rule is
+    // about the CALL: the read_file input (`path: big.txt`) must
+    // survive untouched, while the 20000-char output is dropped.
     final round2Results = fixture.toolResultBlocks(fixture.requests[1]);
     check(
       round2Results.length == 1,
@@ -343,29 +349,36 @@ Future<void> main() async {
       'compaction lost the tool_use_id pairing',
     );
     check(
-      round2Results[0]['content'] == placeholder,
-      'oversized Anthropic tool_result was not compacted: '
+      round2Results[0]['content'] == '',
+      'tool output was not dropped: '
       'got ${'${round2Results[0]['content']}'.length} chars',
     );
+    final round2Uses = fixture.toolUseBlocks(fixture.requests[1]);
+    check(
+      round2Uses.length == 1 &&
+          (round2Uses[0]['input'] as Map)['path'] == 'big.txt',
+      'compaction must keep the tool-call input params',
+    );
 
-    // Round 3: compaction persists, and the short result is untouched
-    // (no over-compaction).
+    // Round 3: the blanks persist; the short result from round 2 was
+    // added AFTER the gate ran and no new pressure fired, so it is not
+    // rewritten. Both call ids still pair.
     final round3Results = fixture.toolResultBlocks(fixture.requests[2]);
     check(
       round3Results.length == 2,
       'round 3 has ${round3Results.length} results',
     );
     check(
-      round3Results[0]['content'] == placeholder &&
+      round3Results[0]['content'] == '' &&
           round3Results[0]['tool_use_id'] == 'crux-ant-1',
-      'round 3 lost the compacted big result',
+      'round 3 lost the blanked big result / pairing',
     );
     check(
       round3Results[1]['content'] == 'tiny file body' &&
           round3Results[1]['tool_use_id'] == 'crux-ant-2',
-      'short tool_result was over-compacted or unpaired',
+      'post-gate short output must survive / stay paired',
     );
-    print('PASS anthropic tool-result compaction');
+    print('PASS anthropic tool-call compaction (outputs dropped)');
   } finally {
     await fixture.close();
   }

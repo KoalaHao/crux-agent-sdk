@@ -7,6 +7,7 @@ import '../tool_executor.dart';
 import '../llm_error.dart';
 import '../../agent_types.dart';
 import 'subagent_distiller.dart';
+import 'history_compactor.dart';
 import 'subagent_prompts.dart';
 
 /// A single in-memory subagent run — one assignment executing in the
@@ -532,49 +533,14 @@ class AgentRunner {
 
   LlmStreamCancelToken? _cancelToken() => _streamCancel;
 
-  /// Stage-1/2 lightweight compact: replace each tool result's
-  /// payload with a one-line placeholder (the call line keeps the
-  /// tool name + args), halving the history without a model call.
+  /// Stage-1/2 lightweight compact: keep the tool CALL context
+  /// (intent if present, otherwise the input parameters) and drop
+  /// every tool OUTPUT. Pairing ids survive, so the next request still
+  /// satisfies the wire protocol without carrying the payloads.
   /// Deliberately lossy — the durable record lives in the report.
-  ///
-  /// Handles both wire families the runner can be dispatched with:
-  ///  - OpenAI-compatible results are standalone
-  ///    `{role: 'tool', content: <output>}` messages.
-  ///  - Anthropic-compatible results ride inside a user message as
-  ///    `{type: 'tool_result', tool_use_id: ..., content: <output>}`
-  ///    blocks. Only the block's `content` string is rewritten — the
-  ///    block and its `tool_use_id` survive, so every result stays
-  ///    paired with its assistant `tool_use` (a dropped result is a
-  ///    400 on the next request). Plain-string user messages (the
-  ///    assignment, the stop notice) and non-`tool_result` blocks
-  ///    are never touched.
   void _compactHistory(List<Map<String, dynamic>> history) {
-    for (final message in history) {
-      final role = message['role'];
-      if (role == 'tool') {
-        final content = message['content'];
-        if (content is String && content.length > _compactOverChars) {
-          message['content'] = _compactedPlaceholder(content.length);
-        }
-      } else if (role == 'user') {
-        final content = message['content'];
-        if (content is! List) continue;
-        for (final block in content) {
-          if (block is! Map || block['type'] != 'tool_result') continue;
-          final output = block['content'];
-          if (output is String && output.length > _compactOverChars) {
-            block['content'] = _compactedPlaceholder(output.length);
-          }
-        }
-      }
-    }
+    compactToolHistory(history);
   }
-
-  /// Tool payloads above this many chars are compacted.
-  static const int _compactOverChars = 200;
-
-  static String _compactedPlaceholder(int chars) =>
-      '[compacted — $chars chars, read again if needed]';
 
   /// Stage-3 distill-and-resume (plan §上下文与蒸馏 item 2–3): one
   /// extra LLM call over the full history produces the three
